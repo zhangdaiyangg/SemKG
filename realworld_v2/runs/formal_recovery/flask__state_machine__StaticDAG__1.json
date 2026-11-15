@@ -1,0 +1,1105 @@
+{
+  "schema": "semkg-v2-run-v1",
+  "repository": "flask",
+  "scenario": "state_machine",
+  "topology": "fork_dependency",
+  "protocol": "StaticDAG",
+  "repeat": 1,
+  "mutation": {
+    "event": "M1",
+    "from": 1,
+    "to": 2,
+    "time": 409860.7587992
+  },
+  "tasks": {
+    "A_direct": {
+      "task_id": "A_direct",
+      "state": "COMMITTED",
+      "attempt_id": "A_direct_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [
+        "semkg_contract.py"
+      ],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 409843.0174863,
+      "end": 409859.3360528,
+      "committed_sha": "{'producer.py': '401a3cc49cf1c71d167b0ebecd3c4c8c2b18b8c7f6267be0ffd55b2e701f6243'}"
+    },
+    "B_transitive": {
+      "task_id": "B_transitive",
+      "state": "COMMITTED",
+      "attempt_id": "B_transitive_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 409859.3422658,
+      "end": 409870.9704619,
+      "committed_sha": null
+    },
+    "D_unrelated": {
+      "task_id": "D_unrelated",
+      "state": "COMMITTED",
+      "attempt_id": "D_unrelated_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 409843.0173039,
+      "end": 409861.1456602,
+      "committed_sha": null
+    },
+    "E_unrelated": {
+      "task_id": "E_unrelated",
+      "state": "COMMITTED",
+      "attempt_id": "E_unrelated_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 409843.0177468,
+      "end": 409855.1816451,
+      "committed_sha": null
+    }
+  },
+  "observed_graph": {
+    "edges": [
+      {
+        "src": "contract:C",
+        "relation": "reads",
+        "dst": "A_direct",
+        "source": "runtime_file_read",
+        "detail": "semkg_contract.py"
+      },
+      {
+        "src": "contract:C",
+        "relation": "reads",
+        "dst": "B_transitive",
+        "source": "runtime_file_read",
+        "detail": "semkg_contract.py"
+      }
+    ]
+  },
+  "decision_trace": {
+    "mode": "explicit_dag_only",
+    "graph_called": false
+  },
+  "selected_tasks": [],
+  "true_affected_tasks": [
+    "A_direct",
+    "B_transitive"
+  ],
+  "rework_tasks": [],
+  "events": [
+    {
+      "kind": "workflow_start",
+      "t_monotonic": 409843.0165321,
+      "protocol": "StaticDAG",
+      "scenario": "state_machine",
+      "topology": "fork_dependency",
+      "repo": "flask",
+      "repeat": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 409843.7648287,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 409843.7960573,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 409843.7970296,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "file_read",
+      "t_monotonic": 409845.1161051,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "path": "semkg_contract.py"
+    },
+    {
+      "kind": "contract_read",
+      "t_monotonic": 409845.1161085,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "path": "semkg_contract.py",
+      "version": 1
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409845.8024374,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "path": "unrelated_report.py"
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409846.5562808,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "path": "unrelated_config.py"
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409847.1795963,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "path": "producer.py"
+    },
+    {
+      "kind": "agent_message",
+      "t_monotonic": 409855.181642,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "message": "Done.\n\n**Wrote exactly one file:** `attempts/E_unrelated_attempt_1/unrelated_config.py` (the attempt directory is rooted at `attempts/E_unrelated_attempt_1`; nothing else was created).\n\nContents:\n- `CONFIG_NAME = \"unrelated_config\"`\n- `_FLAG_VALUE = True` \u2014 the single semantic assumption, hard-coded inline (no import of `semkg_contract` at runtime).\n- `feature_flag()` \u2014 deterministic, always returns `True`.\n- `is_enabled(name)` \u2014 `True` only for `CONFIG_NAME`.\n- `__main__` block with self-checks (flag is `True`, name match, repeated calls equal).\n\n**Check run:** `python -c \"import runpy; runpy.run_path('attempts/E_unrelated_attempt_1/unrelated_config.py', run_name='__main__')\"` \u2192 output `CONFIG_NAME: unrelated_config`, `feature_flag(): True`, `ok` (exit 0)."
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 409855.1816443,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 311,
+            "prompt_tokens": 570,
+            "total_tokens": 881,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 186
+          },
+          "cost_usd": 0.000215652,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 897,
+            "total_tokens": 946,
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 257
+          },
+          "cost_usd": 6.987000000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 64,
+            "prompt_tokens": 972,
+            "total_tokens": 1036,
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 204
+          },
+          "cost_usd": 7.130400000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 69,
+            "prompt_tokens": 1062,
+            "total_tokens": 1131,
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 166
+          },
+          "cost_usd": 6.8988e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 57,
+            "prompt_tokens": 1296,
+            "total_tokens": 1353,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 272
+          },
+          "cost_usd": 7.807200000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 52,
+            "prompt_tokens": 1504,
+            "total_tokens": 1556,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 224
+          },
+          "cost_usd": 6.864000000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 7,
+          "usage": {
+            "completion_tokens": 71,
+            "prompt_tokens": 1620,
+            "total_tokens": 1691,
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 212
+          },
+          "cost_usd": 7.8624e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 8,
+          "usage": {
+            "completion_tokens": 81,
+            "prompt_tokens": 1740,
+            "total_tokens": 1821,
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 204
+          },
+          "cost_usd": 8.3808e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 9,
+          "usage": {
+            "completion_tokens": 213,
+            "prompt_tokens": 1913,
+            "total_tokens": 2126,
+            "prompt_cache_hit_tokens": 1664,
+            "prompt_cache_miss_tokens": 249
+          },
+          "cost_usd": 0.000170142,
+          "tools": []
+        }
+      ]
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409857.2740961,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "path": "unrelated_report.py"
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409859.0077141,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "path": "unrelated_report.py"
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 409859.3360501,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 582,
+            "total_tokens": 631,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 198
+          },
+          "cost_usd": 6.0252e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 450,
+            "prompt_tokens": 693,
+            "total_tokens": 1143,
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 181
+          },
+          "cost_usd": 0.000298686,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 1159,
+            "total_tokens": 1208,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 135
+          },
+          "cost_usd": 5.2721999999999994e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 48,
+            "prompt_tokens": 1234,
+            "total_tokens": 1282,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 210
+          },
+          "cost_usd": 6.3372e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 69,
+            "prompt_tokens": 1308,
+            "total_tokens": 1377,
+            "prompt_cache_hit_tokens": 1152,
+            "prompt_cache_miss_tokens": 156
+          },
+          "cost_usd": 6.8256e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 84,
+            "prompt_tokens": 1403,
+            "total_tokens": 1487,
+            "prompt_cache_hit_tokens": 1152,
+            "prompt_cache_miss_tokens": 251
+          },
+          "cost_usd": 9.1506e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 7,
+          "usage": {
+            "completion_tokens": 84,
+            "prompt_tokens": 1560,
+            "total_tokens": 1644,
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 152
+          },
+          "cost_usd": 7.742400000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 8,
+          "usage": {
+            "completion_tokens": 106,
+            "prompt_tokens": 1670,
+            "total_tokens": 1776,
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 134
+          },
+          "cost_usd": 8.8308e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 9,
+          "usage": {
+            "completion_tokens": 64,
+            "prompt_tokens": 1802,
+            "total_tokens": 1866,
+            "prompt_cache_hit_tokens": 1664,
+            "prompt_cache_miss_tokens": 138
+          },
+          "cost_usd": 6.4092e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 10,
+          "usage": {
+            "completion_tokens": 39,
+            "prompt_tokens": 1945,
+            "total_tokens": 1984,
+            "prompt_cache_hit_tokens": 1792,
+            "prompt_cache_miss_tokens": 153
+          },
+          "cost_usd": 5.1726e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 11,
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 2055,
+            "total_tokens": 2102,
+            "prompt_cache_hit_tokens": 1920,
+            "prompt_cache_miss_tokens": 135
+          },
+          "cost_usd": 5.420999999999999e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 12,
+          "usage": {
+            "completion_tokens": 45,
+            "prompt_tokens": 2181,
+            "total_tokens": 2226,
+            "prompt_cache_hit_tokens": 1920,
+            "prompt_cache_miss_tokens": 261
+          },
+          "cost_usd": 7.191e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 13,
+          "usage": {
+            "completion_tokens": 61,
+            "prompt_tokens": 2252,
+            "total_tokens": 2313,
+            "prompt_cache_hit_tokens": 2048,
+            "prompt_cache_miss_tokens": 204
+          },
+          "cost_usd": 7.3344e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 14,
+          "usage": {
+            "completion_tokens": 57,
+            "prompt_tokens": 2403,
+            "total_tokens": 2460,
+            "prompt_cache_hit_tokens": 2176,
+            "prompt_cache_miss_tokens": 227
+          },
+          "cost_usd": 7.4778e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 15,
+          "usage": {
+            "completion_tokens": 110,
+            "prompt_tokens": 2611,
+            "total_tokens": 2721,
+            "prompt_cache_hit_tokens": 2432,
+            "prompt_cache_miss_tokens": 179
+          },
+          "cost_usd": 0.000100146,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 16,
+          "usage": {
+            "completion_tokens": 213,
+            "prompt_tokens": 2836,
+            "total_tokens": 3049,
+            "prompt_cache_hit_tokens": 2688,
+            "prompt_cache_miss_tokens": 148
+          },
+          "cost_usd": 0.000158064,
+          "tools": [
+            "run_command"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 409859.3420407,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 409859.8391062,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "file_read",
+      "t_monotonic": 409860.7560449,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "path": "semkg_contract.py"
+    },
+    {
+      "kind": "contract_read",
+      "t_monotonic": 409860.7560481,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "path": "semkg_contract.py",
+      "version": 1
+    },
+    {
+      "kind": "mutation_prepare",
+      "t_monotonic": 409860.7585314,
+      "scenario": "state_machine",
+      "from_version": 1,
+      "to_version": 2
+    },
+    {
+      "kind": "contract_mutation",
+      "t_monotonic": 409860.7588026,
+      "event": "M1",
+      "from": 1,
+      "to": 2,
+      "time": 409860.7587992
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409861.1456423,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "path": "unrelated_report.py"
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 409861.1456586,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 246,
+            "prompt_tokens": 572,
+            "total_tokens": 818,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 188
+          },
+          "cost_usd": 0.000176952,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 105,
+            "prompt_tokens": 834,
+            "total_tokens": 939,
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 194
+          },
+          "cost_usd": 9.402e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 113,
+            "prompt_tokens": 965,
+            "total_tokens": 1078,
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 197
+          },
+          "cost_usd": 9.965399999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 129,
+            "prompt_tokens": 1112,
+            "total_tokens": 1241,
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 216
+          },
+          "cost_usd": 0.000112488,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 132,
+            "prompt_tokens": 1275,
+            "total_tokens": 1407,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 251
+          },
+          "cost_usd": 0.000119922,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 66,
+            "prompt_tokens": 1441,
+            "total_tokens": 1507,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 161
+          },
+          "cost_usd": 6.759000000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 7,
+          "usage": {
+            "completion_tokens": 68,
+            "prompt_tokens": 1533,
+            "total_tokens": 1601,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 253
+          },
+          "cost_usd": 8.259e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 8,
+          "usage": {
+            "completion_tokens": 82,
+            "prompt_tokens": 1635,
+            "total_tokens": 1717,
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 227
+          },
+          "cost_usd": 8.7474e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 9,
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 1751,
+            "total_tokens": 1851,
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 215
+          },
+          "cost_usd": 9.6858e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 10,
+          "usage": {
+            "completion_tokens": 76,
+            "prompt_tokens": 1885,
+            "total_tokens": 1961,
+            "prompt_cache_hit_tokens": 1664,
+            "prompt_cache_miss_tokens": 221
+          },
+          "cost_usd": 8.374199999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 11,
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 1995,
+            "total_tokens": 2042,
+            "prompt_cache_hit_tokens": 1792,
+            "prompt_cache_miss_tokens": 203
+          },
+          "cost_usd": 6.4026e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 12,
+          "usage": {
+            "completion_tokens": 241,
+            "prompt_tokens": 2122,
+            "total_tokens": 2363,
+            "prompt_cache_hit_tokens": 1920,
+            "prompt_cache_miss_tokens": 202
+          },
+          "cost_usd": 0.00018066,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 13,
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 2379,
+            "total_tokens": 2426,
+            "prompt_cache_hit_tokens": 2176,
+            "prompt_cache_miss_tokens": 203
+          },
+          "cost_usd": 6.517799999999999e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 14,
+          "usage": {
+            "completion_tokens": 234,
+            "prompt_tokens": 2506,
+            "total_tokens": 2740,
+            "prompt_cache_hit_tokens": 2304,
+            "prompt_cache_miss_tokens": 202
+          },
+          "cost_usd": 0.000177612,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 15,
+          "usage": {
+            "completion_tokens": 40,
+            "prompt_tokens": 2756,
+            "total_tokens": 2796,
+            "prompt_cache_hit_tokens": 2560,
+            "prompt_cache_miss_tokens": 196
+          },
+          "cost_usd": 6.108e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 16,
+          "usage": {
+            "completion_tokens": 241,
+            "prompt_tokens": 2868,
+            "total_tokens": 3109,
+            "prompt_cache_hit_tokens": 2688,
+            "prompt_cache_miss_tokens": 180
+          },
+          "cost_usd": 0.00017966399999999998,
+          "tools": [
+            "write_file"
+          ]
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 409861.1516686,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 409861.1521906,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409862.5140792,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "path": "downstream.py"
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 409866.0375306,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "path": "check_downstream.py"
+    },
+    {
+      "kind": "agent_message",
+      "t_monotonic": 409870.9704582,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "message": "Done. Files written (resolved to `attempts/B_transitive_attempt_1/`):\n\n**1. `downstream.py`** \u2014 self-contained artifact, no `semkg_contract` import:\n- Records the assumption explicitly: `CONTRACT_VERSION_ASSUMED = 1`, with a docstring noting the semantics were copied from contract v1.\n- `ALLOWED_TRANSITIONS = frozenset({(\"new\",\"paid\"), (\"new\",\"cancelled\")})` \u2014 the exact v1 rule set, inlined.\n- `can_transition(old, new)` \u2192 membership check, identical behavior to the contract.\n- `consume(old, new)` \u2192 returns `{\"ok\": True, \"old\", \"new\"}` on an allowed transition, else `{\"ok\": False, \"old\", \"new\", \"error\": \"invalid_transition\"}`.\n\n**2. `check_downstream.py`** \u2014 local sanity check (not part of the deliverable).\n\nLocal check output: `new\u2192paid` and `new\u2192cancelled` accepted; `paid\u2192new`, `new\u2192new`, `cancelled\u2192paid` rejected with `invalid_transition`. All checks passed."
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 409870.9704611,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 47,
+            "prompt_tokens": 579,
+            "total_tokens": 626,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 195
+          },
+          "cost_usd": 5.8602000000000006e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 292,
+            "prompt_tokens": 688,
+            "total_tokens": 980,
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 176
+          },
+          "cost_usd": 0.000203136,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 100,
+            "prompt_tokens": 996,
+            "total_tokens": 1096,
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 228
+          },
+          "cost_usd": 9.6504e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 60,
+            "prompt_tokens": 1122,
+            "total_tokens": 1182,
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 226
+          },
+          "cost_usd": 7.258799999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 188,
+            "prompt_tokens": 1208,
+            "total_tokens": 1396,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 184
+          },
+          "cost_usd": 0.00014347199999999998,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 49,
+            "prompt_tokens": 1412,
+            "total_tokens": 1461,
+            "prompt_cache_hit_tokens": 1152,
+            "prompt_cache_miss_tokens": 260
+          },
+          "cost_usd": 7.1856e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 7,
+          "usage": {
+            "completion_tokens": 73,
+            "prompt_tokens": 1562,
+            "total_tokens": 1635,
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 154
+          },
+          "cost_usd": 7.112399999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 8,
+          "usage": {
+            "completion_tokens": 73,
+            "prompt_tokens": 1879,
+            "total_tokens": 1952,
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 343
+          },
+          "cost_usd": 9.985799999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 9,
+          "usage": {
+            "completion_tokens": 51,
+            "prompt_tokens": 2038,
+            "total_tokens": 2089,
+            "prompt_cache_hit_tokens": 1792,
+            "prompt_cache_miss_tokens": 246
+          },
+          "cost_usd": 7.287599999999998e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 10,
+          "usage": {
+            "completion_tokens": 253,
+            "prompt_tokens": 2273,
+            "total_tokens": 2526,
+            "prompt_cache_hit_tokens": 2048,
+            "prompt_cache_miss_tokens": 225
+          },
+          "cost_usd": 0.00019169399999999998,
+          "tools": []
+        }
+      ]
+    },
+    {
+      "kind": "graph_decision",
+      "t_monotonic": 409870.9706332,
+      "protocol": "StaticDAG",
+      "selected": [],
+      "decision": {
+        "mode": "explicit_dag_only",
+        "graph_called": false
+      }
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 409870.9715093,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "version": 1,
+      "stale": true
+    },
+    {
+      "kind": "hidden_test",
+      "t_monotonic": 409870.9750727,
+      "result": {
+        "affected": {
+          "A_direct": false,
+          "B_transitive": false
+        },
+        "unrelated": {
+          "D_unrelated": true,
+          "E_unrelated": true
+        },
+        "oracle": {
+          "input": [
+            "paid",
+            "refunded"
+          ],
+          "expected": true,
+          "old": false
+        },
+        "all_pass": false
+      }
+    }
+  ],
+  "overlapping_pairs": [
+    [
+      "E_unrelated",
+      "D_unrelated"
+    ],
+    [
+      "E_unrelated",
+      "A_direct"
+    ],
+    [
+      "D_unrelated",
+      "A_direct"
+    ],
+    [
+      "D_unrelated",
+      "B_transitive"
+    ]
+  ],
+  "evaluation": {
+    "affected": {
+      "A_direct": false,
+      "B_transitive": false
+    },
+    "unrelated": {
+      "D_unrelated": true,
+      "E_unrelated": true
+    },
+    "oracle": {
+      "input": [
+        "paid",
+        "refunded"
+      ],
+      "expected": true,
+      "old": false
+    },
+    "all_pass": false
+  },
+  "total_cost_usd": 0.005185116,
+  "makespan_seconds": 27.95884069998283,
+  "model": "deepseek-flash",
+  "run_id": "flask__state_machine__StaticDAG__1"
+}

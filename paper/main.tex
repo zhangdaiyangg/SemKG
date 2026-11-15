@@ -1,0 +1,313 @@
+\RequirePackage{amsmath}
+\documentclass[a4paper,runningheads]{llncs}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{amsmath,amssymb}
+\usepackage{multirow}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{enumitem}
+\usepackage{microtype}
+\usepackage{etoolbox}
+\usepackage[hidelinks]{hyperref}
+\hypersetup{pdftitle={SemKG: Coordinating Parallel Coding Agents under Evolving Semantic Contracts},pdfauthor={}}
+\emergencystretch=2em
+\AtBeginEnvironment{thebibliography}{\fontsize{5}{5.2}\selectfont\setlength{\itemsep}{-1.8pt}\setlength{\parsep}{-0.3pt}\setlength{\parskip}{0pt}}
+\setlist{nosep,leftmargin=*}
+\setlist[description]{leftmargin=1.7cm,labelindent=0pt}
+\renewcommand\UrlFont{\small\ttfamily}
+
+\begin{document}
+\frontmatter
+\pagestyle{headings}
+\mainmatter
+\title{SemKG: Coordinating Parallel Coding Agents under Evolving Semantic Contracts}
+\titlerunning{SemKG: Parallel Coding Agents}
+\author{Anonymous Authors}
+\institute{Anonymous Institution}
+\maketitle
+
+\begin{abstract}
+Parallel coding agents can finish a textual merge while an in-flight task still embodies an obsolete semantic contract. We study SemKG (Semantic Knowledge Graph), a coordination protocol that represents contract--task dependencies as a typed, versioned graph and selectively invalidates affected work. We evaluate it in two separated settings: an oracle-guided discrete-event simulation with 40 scenarios, five seeds, and eight strategies under common draws; and a corrected graph-driven runtime with 400 DeepSeek-backed workflows across five pinned Python repositories. The repository evaluation records 385 complete evaluations, 15 retained evaluator errors, 54.65 million model tokens, and \$3.43 in model cost. Across 100 matched Global--SemKG pairs, SemKG saves 2.02 reworked tasks and 24.65 seconds per workflow on average. The paired end-to-end pass-rate difference is +2 percentage points, with a 95\% interval of $[-13,+17]$: correctness equivalence is not established. Selectivity is conditional on observed dependencies; its cost advantage depends on avoided Agent rework outweighing graph coordination overhead.
+\keywords{multi-agent systems \and software engineering \and knowledge graphs \and distributed computing \and semantic consistency \and task scheduling}
+\end{abstract}
+
+\section{Introduction}
+Repository-level software development is increasingly decomposed into tasks that can be executed by specialized coding agents. Parallel execution is attractive because independent files and services can be explored simultaneously, but the boundary between independent and dependent work is not adequately described by file paths or textual merge conflicts. A producer can change the meaning of an interface without changing its type signature; a consumer can finish cleanly against a stale assumption; and a test can pass in isolation while the integrated repository violates a business constraint.
+
+This paper studies semantic consistency when multiple coding agents execute concurrently. The central object is the coordination protocol that decides which in-flight work remains valid after a semantic contract changes and which work must be revalidated. The protocol must expose parallelism when tasks are independent, but it must also propagate the consequences of a contract change beyond directly imported files.
+
+We present SemKG as a protocol model for agent-aware software-engineering workflows. Its typed graph links contract facts and versions to task reads, writes, and semantic-dependency edges. Each task records the contract versions used for its attempt. A contract change is traversed through an observed graph and converted into selective invalidation and re-dispatch while unrelated work remains eligible. The accompanying artifact combines an oracle-guided discrete-event simulator with an executable contract-test sanity check, providing a controlled basis for studying coordination behavior.
+
+We ask: (RQ1) does commit-time validation reject stale attempts, as distinct from final staleness after later changes; (RQ2) does semantic propagation prevent indirect stale artifacts beyond direct version checking; (RQ3) when does saved rework outweigh graph coordination overhead; and (RQ4) how does graph-driven selective invalidation trade semantic correctness against execution cost in controlled repository workflows?
+
+The contribution is fourfold:
+\begin{itemize}
+\item a versioned semantic dependency model that connects contract facts to task reads, writes, patches, and verification evidence;
+\item a selective invalidation and re-dispatch protocol for parallel coding agents, with explicit treatment of stale assumptions and semantic descendants;
+\item a reproducible paired simulation and executable contract-test sanity check that separate final direct and transitive violations, conflict events, rework, effective makespan, graph overhead, and total cost;
+\item a graph-driven DeepSeek-backed repository-runtime evaluation with raw traces, independent hidden tests, cost recomputation, and explicit observation-quality measurements.
+\end{itemize}
+
+The study targets the software systems and technologies scope of PDCAT through task mapping and scheduling, agent-based technologies, software-development tools, and distributed software applications. The evaluation exposes the causal variables and compares the coordination mechanism under identical tasks, models, and budgets.
+
+\section{Background and Related Work}
+\subsection{Graph-Based Software Engineering}
+Repository-level code graphs improve navigation for software-engineering agents. RepoGraph constructs repository-level structure and reports gains when the graph is plugged into issue-resolution systems~\cite{repograph}. These systems motivate structured software memory, but they do not define a protocol for invalidating in-flight parallel tasks when a semantic contract changes.
+
+\subsection{Multi-Agent Testing and Coding}
+AutoRestTest uses a semantic property dependency graph with multiple specialized agents for REST API exploration~\cite{autoresttest}. This line of work establishes that dependency structure and orchestration affect cost and quality. SemKG addresses a different point in the lifecycle: the dependency is a versioned semantic fact, and the protocol must repair the set of tasks that were already started using an obsolete fact.
+
+Incremental build systems such as Bazel Skyframe use reverse dependency closure and selective recomputation~\cite{bazel}; build-system theory separates scheduling from rebuilding~\cite{buildsystems}. SafeMerge verifies semantic conflict freedom of merged programs~\cite{safemerge}. SemKG does not claim graph invalidation or semantic merge verification as new. It instead tracks a running Agent's contract-version assumption and validates both that assumption and upstream artifact provenance at commit, handling late results and requeued completed work.
+
+\subsection{Distributed-System Coordination}
+Agora uses domain invariants and multiple agents to discover protocol-level bugs~\cite{agora}. This approach demonstrates the value of executable constraints and specialized roles. SemKG applies the same principle to software-development coordination: contracts are first-class graph objects, and a change in a contract controls scheduling and rework.
+
+\section{Problem Definition}
+Let a repository task set be $T=(V,E)$, where $V$ contains implementation, adapter, client, test, and documentation tasks and $E$ contains explicit build or task dependencies. Let $C$ be a set of semantic contract facts. A fact $c\in C$ has a version $\nu(c)$. A task $v$ reads $R(v)\subseteq C$, writes $W(v)\subseteq C$, and produces a patch $p_v$.
+
+The explicit DAG is insufficient when two tasks share a contract without a file-level edge. We therefore define a fact-labeled semantic dependency relation $D_s\subseteq V\times C\times V$, where $(u,c,v)\in D_s$ means that the output of $v$ is derived under a fact written or constrained by $u$. Its task-level projection is $\mathsf{semanticDep}(u,v)\iff\exists c:(u,c,v)\in D_s$. A task execution records an assumption snapshot $A_v=\{(c,\nu(c)):c\in R(v)\}$. If a contract writer changes $c$ to $\nu'(c)$, a task is semantically stale when its assumption snapshot contains the previous version and the task's result has not been revalidated.
+
+The coordination objective is multi-dimensional. Let $K$ be the number of agents, $M$ the makespan, $Q$ the number of semantic conflict events, $V$ the number of final contract violations, $R$ the number of reworked tasks, and $B$ the token-equivalent cost. We compare protocols under the same task graph, mutation, and hash-keyed outcome draws. A semantic conflict is a failed attempt attributed to a stale assumption or explicit invalidation. A \emph{commit-time stale acceptance} is a successful commit whose attempt snapshot is already older than the current contract version at completion. A \emph{final direct violation} is an affected committed task that reads a changed contract and retains an obsolete recorded read version at workflow end; it may be introduced by a later mutation after an otherwise valid commit. These definitions keep commit safety, final state, and execution noise separate.
+
+\section{SemKG}
+\subsection{Architecture}
+Figure~\ref{fig:architecture} summarizes the protocol loop. Repository and runtime evidence supply typed contract--task edges; the graph stores versions and provenance. After a contract update, the impact controller traverses observed descendants and a topological scheduler re-dispatches affected work. Specialist agents exchange assumption snapshots through graph state. Parsers or static analysis could supply additional evidence in a production adapter; the evaluated runtime uses explicit reads, not inferred implicit semantics.
+
+\refstepcounter{figure}\label{fig:architecture}
+\begin{center}
+\includegraphics[width=\textwidth]{../figures/semkg_method_architecture.pdf}
+\parbox{\textwidth}{\small\textbf{Fig.~\thefigure.} SemKG overview. Solid arrows show control flow; dashed arrows return commit evidence to the versioned graph. The affected set $I$ is selectively requeued. Atomic commit checks both contract versions and upstream provenance; unrelated work remains eligible.}
+\end{center}
+
+\subsection{Typed Versioned Graph}
+The simulator instantiates task and contract nodes and the following typed relations. Important relations include
+\begin{align*}
+&\mathsf{reads}(v,c),\quad \mathsf{writes}(v,c),\quad \mathsf{assumes}(v,c,\nu),\\
+&\mathsf{changes}(p,c,\nu'),\quad \mathsf{validatedBy}(p,t),\quad \mathsf{derivedFrom}(e,c),\\
+&\mathsf{invalidates}(c, v),\quad \mathsf{semanticDep}(u,v),\quad \mathsf{explicitDep}(u,v).
+\end{align*}
+The perfect condition exposes every generated typed edge. The noisy condition independently drops true edges and inserts typed false edges before traversal. Here the ``8\% false-edge rate'' is a construction ratio: the simulator samples $\operatorname{round}(0.08|E|)$ extra edges, where $|E|$ is the number of true graph edges; it is not a false-positive rate over all candidate non-edges. We report edge-level precision/recall on the observed graph separately from task-set precision/recall after graph traversal.
+
+For each contract, we compute a canonical fingerprint from type, units, enumerated values, preconditions, postconditions, error behavior, and compatibility metadata. A change from $f_c^i$ to $f_c^{i+1}$ creates a new version edge rather than overwriting history. The graph can therefore answer both ``which tasks read the current contract?'' and ``which tasks were generated using its previous version?''
+
+\subsection{Agent Roles and Protocol}
+The Planner decomposes a change request into tasks and explicit semantic facts. Contract Agents extract and validate fingerprints. Coder Agents operate in isolated workspaces and emit patches plus the assumption snapshot $A_v$. Verifier Agents run static checks, unit and contract tests, and schema or invariant checks. The scheduler maintains ready, running, stale, verified, and committed states.
+
+When a patch changes a contract, the Impact Controller performs a graph traversal from the changed contract over typed reads, writes, explicit dependency edges, and semantic-dependency edges. A running task that reaches a changed contract is marked stale. A completed task in the predicted affected set is removed from the committed frontier and requeued; a task that has not started is held until its upstream contract version is available. A task is re-dispatched only when its direct dependencies are complete and its assumption snapshot can be refreshed. Tasks outside the affected subgraph continue concurrently.
+
+\begin{algorithm}
+\caption{Selective invalidation and re-dispatch}
+\label{alg:semkg}
+\begin{algorithmic}[1]
+\Require graph $G$, completed set $F$, running set $L$, contract update $c:\nu\rightarrow\nu'$
+\State $G\leftarrow\mathsf{appendVersion}(G,c,\nu')$
+\State $I\leftarrow\mathsf{typedTraverse}(G,c)\cap (F\cup L)$
+\ForAll{$v\in I$}
+  \State $\mathsf{state}(v)\leftarrow\mathsf{STALE}$; $\mathsf{emit}(v,\mathsf{reason}=c)$
+\EndFor
+\ForAll{$v\in L\setminus I$}
+  \State keep execution and its assumption snapshot
+\EndFor
+\While{$\exists v:\mathsf{state}(v)\in\{\mathsf{READY},\mathsf{STALE}\}$}
+  \State $v\leftarrow\mathsf{selectReady}(G,F,\mathsf{budget})$
+  \State $A_v\leftarrow\mathsf{snapshot}(G,R(v))$; dispatch $v$
+  \State verify patch and contract tests; commit or requeue $v$
+\EndWhile
+\end{algorithmic}
+\end{algorithm}
+
+The commit operation is guarded by an atomic compare-and-commit rule. For an attempt with assumption snapshot $A_v$, a patch is committed only if
+\[
+\forall c\in R(v),\quad \nu_{A_v}(c)=\nu_{\mathrm{commit}}(c),
+\]
+and every recorded upstream artifact version equals the committed upstream version. A failed check moves the attempt to \textsc{Stale}; late results from an invalidated attempt are discarded by attempt identifier. Requeued descendants receive a fresh snapshot after their upstream states become committed. If another contract mutation occurs, the same rule is applied against the newest version, so stale attempts cannot commit even when invalidation messages arrive out of order. In the perfect condition, $R_{\mathrm{observed}}(v)=R_{\mathrm{true}}(v)$. In the noisy condition, the atomic check is evaluated over the observed read set $R_{\mathrm{observed}}(v)$, while the evaluator retains $R_{\mathrm{true}}(v)$ to expose missed edges; an unobserved changed read can therefore be accepted and is counted as a commit-time stale acceptance. This is a safety boundary of incomplete observation, not a violation of the conditional compare-and-commit rule. The present simulator verifies one mutation per scenario and does not extrapolate to overlapping mutations.
+
+\subsection{Why Selective Rework Is Different from Static Scheduling}
+A static DAG can prevent a client from starting before a directly imported interface is built, but it does not express that a type-compatible contract has changed its semantic unit or error behavior. It also cannot identify a completed or in-flight task that read the old fact. SemKG adds a version check to each assumption and a graph traversal from the changed contract. Conversely, the protocol does not serialize all work: a task is held or repeated only when it lies in the affected semantic subgraph.
+
+\section{Experimental Method}
+\subsection{Benchmark Construction}
+We implement a seeded, paired semantic-contract benchmark in Python. Each scenario contains three parallel lanes. A lane includes domain, API, service, adapter, client, test, contract-test, and documentation tasks. Six contract types represent price units, order state, payment idempotency, error semantics, inventory reservation, and user identity. Each task has explicit dependencies, contract reads and writes, an execution duration, and a token-equivalent cost. Cross-lane semantic edges connect shared domain contracts to services and tests, creating dependencies that are invisible to the explicit task DAG.
+
+At a scenario-specific tick in $\{3,\ldots,7\}$, one of four semantic contracts mutates. The mutation is concrete (for example, ``dollar'' to ``cent'', ``pending'' to ``authorized'', or a v1 to v2 idempotency/error rule) and increments its graph version. The hidden affected set is the transitive closure of direct readers/writers plus explicit and semantic dependency edges. Each protocol receives exactly the same duration values and hash-keyed outcome draw for a given scenario, seed, task, and attempt. Noisy edge sampling iterates a canonical sorted edge list, so seeded runs are stable across Python processes. The simulator has no model API calls; task tokens are a controlled proxy, while graph construction, graph query, and coordination ticks are charged explicitly in total cost. The complete generator, runner, manifests, paired differences, sensitivity scripts, and plotting code are included with the artifact.
+
+\subsection{Executable Repository Microbenchmark}
+To connect the simulator's contract check to executable software behavior, we generate 36 Python contract-test cases: five direct semantic categories (six cases each: price units, error handling, state-machine transitions, idempotency, and configuration defaults) and six explicit three-hop cases. The six cases within each direct category use distinct deterministic parameter values, and the six multi-hop cases use distinct contract-version values. The direct cases contain a contract module, a client module, and a unit/contract test. Each multi-hop case contains Contract C, producer A, intermediate B, and final artifact D; B reads A without reading C, and D reads B without reading C. Version-Check refreshes only A, whereas SemKG traverses and refreshes the complete observed path. The stale protocols retain the pre-mutation semantic assumption, whereas the validated and graph protocols refresh the consumers selected by the typed contract relation. We run Python's standard-library test discovery in each materialized case and record pass/fail outcomes. This executable sanity check isolates the contract predicate and is independent of the simulator's stochastic outcome draws.
+
+\subsection{Graph-Driven Controlled Repository Evaluation}
+We froze Requests, Flask, pytest, Click, and Rich at pinned commits and injected a compact contract module into isolated copies. Each workflow contains four coding tasks: two affected tasks and two unrelated artifact tasks. A three-agent first wave runs concurrently; the contract mutates after the old version has been read, and the independent evaluator retains the v2 oracle. The corrected graph-driven evaluation uses four policies, four mutations, and five repeats per repository (400 workflows). Recovery executes selected tasks sequentially, with the downstream task after its producer. A bounded DeepSeek runtime supplies file and Python-test tools; calls, graph decisions, attempts, hidden outcomes, tokens, and costs are persisted.
+
+\begin{table}
+\centering
+\caption{Controlled repository evaluation (100 runs per policy). Resource means and total model costs include all runs; hidden pass counts retain evaluator errors as end-to-end failures.}
+\label{tab:realworld}
+\footnotesize
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{lrrrrrrrr}
+\toprule
+Policy & Complete & Hidden pass & Rework & Preserve & False inv. & Missed inv. & Makespan (s) & Cost (USD)\\
+\midrule
+StaticDAG & 95 & 0 & 0.00 & 2.00 & 0.00 & 2.00 & 36.39 & 0.552\\
+Version-Check & 100 & 16 & 1.31 & 1.99 & 0.01 & 0.70 & 61.34 & 0.770\\
+Global-Invalidate & 93 & 68 & 4.00 & 0.00 & 2.00 & 0.00 & 92.29 & 1.175\\
+SemKG-Observed & 97 & 70 & 1.98 & 1.99 & 0.01 & 0.03 & 67.64 & 0.936\\
+\bottomrule
+\end{tabular}}
+\end{table}
+
+SemKG-Observed creates contract edges from logged contract-file reads and provenance edges from logged reads of committed producer artifacts. Across all policies, the frozen decision graphs contain 518 contract-read and 285 artifact-read evidence records, all tagged \texttt{runtime\_file\_read}. Paths are mapped to task roles by the harness; no implicit semantic inference or unrestricted dependency extraction is evaluated. The 400 runs used 54,649,418 tokens and cost \$3.434305. Graph rebuild/update replay is sub-millisecond-to-millisecond, not a deployed graph-service benchmark. Four SemKG runs retain missed or false relations. These are controlled injected changes, not natural project histories.
+
+\subsection{Protocols}
+\begin{description}
+\item[Serial] One agent executes the explicit DAG using the current contract version.
+\item[Serial-Validated] Serial execution with atomic commit-time version validation and retry on a stale snapshot.
+\item[NaiveParallel] Three agents execute ready tasks concurrently using the snapshot available at dispatch; semantic descendants are not invalidated. An order violation is recorded diagnostically, but it does not receive a protocol-specific success-probability penalty.
+\item[StaticDAG] Three agents use explicit DAG dependencies and current scheduling, but do not propagate semantic invalidation.
+\item[Version-Check] Three agents validate only direct contract readers at completion; no transitive semantic propagation is used.
+\item[Global-Invalidate] Every contract change invalidates all completed and running tasks, providing a conservative safety baseline.
+\item[SemKG-Perfect] Three agents use versioned assumptions and the exact affected set, representing an upper-bound graph observation condition.
+\item[SemKG-Noisy] Three agents use versioned assumptions and a noisy typed graph with 0.82 edge recall and the construction ratio described above; the hidden affected set is never supplied to the scheduler. Commit validation covers only observed reads.
+\end{description}
+
+All protocols use the same generated scenarios, duration distributions, contract mutations, and hash-keyed outcome draws. NaiveParallel ignores both explicit dependencies and semantic dependencies; StaticDAG enforces only explicit dependencies. SemKG protocols requeue predicted affected tasks, including tasks that completed before the mutation. A failed attempt is re-run by the scheduler; it remains counted as a conflict or rework event. The final contract check compares every affected committed task's recorded read versions and upstream artifact provenance with the post-mutation version.
+
+\subsection{Metrics and Reproducibility}
+We report commit-time stale acceptance, final direct contract staleness, transitive dependency staleness, post-commit staleness, semantic conflict events, test failures, reworked tasks, effective makespan, task tokens, graph construction/query and coordination ticks, total cost, and invalidation precision/recall. The primary semantic-violation column is \emph{final direct violation}; transitive staleness is reported separately because an indirect task may not read the changed contract itself. The affected set is retained only for evaluation. We use 40 scenarios, 5 seeds, and 8 protocols, giving 1,600 runs and 200 runs per protocol. Confidence intervals for protocol means resample the 40 scenario means. Paired differences use a two-level bootstrap: scenarios are resampled first, then seeds are resampled within each selected scenario. We additionally vary agent count ($1,2,3,4$), mutation tick ($3,5,7,9$), and base task-success probability ($0.90,0.95,0.985$) in a separate sensitivity suite. The graph-cost scales are sensitivity parameters for graph construction, query, and coordination overhead; they are not measurements of a deployed graph service.
+
+\paragraph{Repository inference.} We match Global and SemKG by repository, mutation, and repeat (100 pairs). Resource measurements exist even when evaluation fails, so all-run means are primary; both-complete pairs form a sensitivity subset. Intervals resample 20 repository--mutation cells 20,000 times, retaining repeat matches and weighting cells equally. These are descriptive fixed-workload intervals, not 400 independent observations or common-random-number Agent outputs.
+
+\paragraph{Artifact availability.} An offline supplement, \texttt{semkg-review-artifact.zip}, is prepared for separate submission-system upload; no public URL is assigned. It contains the 400 frozen traces, matched-pair CSV, edge-intervention records, simulator, source, and SHA-256 manifest. Its \texttt{reproduce-review.ps1} recomputes statistics and graph replay without API calls. It does not reproduce new stochastic Agent generations.
+
+\section{Results}
+Table~\ref{tab:results} reports means over 40 scenario means; all protocols use paired scenario--seed observations. Figure~\ref{fig:mainresults} shows bootstrap intervals.
+
+\begin{table}
+\centering
+\caption{Results over 40 scenarios and 5 seeds per protocol. Makespan includes graph and coordination ticks; total cost includes task tokens plus explicit graph overhead. Lower is better.}
+\label{tab:results}
+\footnotesize
+\begin{tabular}{lrrrrrr}
+\toprule
+Protocol & Final direct & Commit stale & Conflicts & Rework & Makespan & Total cost\\
+\midrule
+Serial & 0.43 & 0.24 & 0.19 & 0.53 & 84.87 & 21,983\\
+Serial-Validated & 0.20 & 0.00 & 0.58 & 0.92 & 86.35 & 22,325\\
+NaiveParallel & 1.79 & 0.79 & 0.59 & 0.93 & 30.31 & 22,455\\
+StaticDAG & 1.37 & 0.67 & 0.68 & 1.01 & 31.98 & 22,558\\
+Version-Check & 0.70 & 0.00 & 1.80 & 2.14 & 33.41 & 23,582\\
+Global-Invalidate & 0.00 & 0.00 & 3.00 & 5.95 & 37.33 & 27,026\\
+SemKG-Perfect & 0.00 & 0.00 & 1.89 & 3.65 & 75.67 & 29,379\\
+SemKG-Noisy & 0.12 & 0.03 & 2.07 & 3.85 & 73.86 & 29,286\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{../figures/main_results.png}
+\caption{Final direct violations, commit-time stale acceptances, conflict events, rework, effective makespan, and total coordination cost. Error bars are bootstrap 95\% intervals over scenario means.}
+\label{fig:mainresults}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{../figures/realworld_paired_effects.png}
+\caption{Strict matched-complete sensitivity analysis: each line joins cell means from the same repeats on both sides (90 pairs across 20 cells). All-run estimates retain all 100 pairs.}
+\label{fig:realworldpaired}
+\end{figure}
+
+\begin{figure}
+\centering
+\includegraphics[width=\textwidth]{../figures/realworld_success_graph.png}
+\caption{Correctness denominators (left) and observed decision-set frequencies (right). These frequencies are descriptive; causal edge interventions are reported separately.}
+\label{fig:realworldevidence}
+\end{figure}
+
+SemKG-Perfect produces no final direct or transitive semantic violations in the synthetic workload, while NaiveParallel, StaticDAG, and Serial produce 1.79, 1.37, and 0.43 final direct violations per scenario, respectively. The commit-time metric separates endpoint state from acceptance safety: NaiveParallel and StaticDAG accept 0.79 and 0.67 stale read attempts per scenario, whereas Serial-Validated, Version-Check, Global-Invalidate, and SemKG-Perfect accept none. SemKG-Noisy accepts 0.03 stale read attempts and ends with 0.12 direct violations at 0.82 edge recall and the stated edge-construction noise. The two parallel baselines leave affected tasks committed with obsolete read versions; SemKG-Perfect requeues both completed and running affected tasks and follows explicit downstream artifact edges.
+
+SemKG makes invalidated attempts explicit: SemKG-Perfect records 1.89 conflict events versus 0.59 for NaiveParallel and 0.68 for StaticDAG. The safety baselines isolate the mechanism: direct checking leaves Version-Check with 0.70 final violations; Global-Invalidate and SemKG-Perfect reach zero with 5.95 and 3.65 reworked tasks, respectively. Safety does not imply lower total cost.
+
+The paired bootstrap estimates that Global-Invalidate performs 2.300 more reworked tasks than SemKG-Perfect, with a 95\% CI of $[1.590,2.901]$. It is 38.34 ticks faster (95\% CI $[35.645,41.105]$) and 2,352 cost units cheaper (95\% CI $[1,554,3,173]$). Version-Check has 0.70 more violations than SemKG-Perfect (95\% CI $[0.305,1.086]$) while saving 1.51 reworked tasks (95\% CI $[0.899,2.050]$). These paired differences use the two-level scenario-then-seed bootstrap. Relative to SemKG-Perfect, NaiveParallel has $1.785$ more final violations (95\% CI $[1.435,2.135]$), while StaticDAG has $1.370$ more (95\% CI $[0.850,1.925]$). SemKG-Perfect records $2.715$ more reworked tasks than NaiveParallel (95\% CI $[1.770,3.631]$) and $2.635$ more than StaticDAG (95\% CI $[1.930,3.380]$). The paired intervals expose the quality--coordination-cost trade-off instead of treating invalidation as free.
+
+For the repository runtime, all 100 matched pairs retain measured resources, including evaluator errors. SemKG saves 2.020 reworked tasks (95\% CI $[1.980,2.060]$), 24.65 s ($[21.07,28.59]$), and \$0.00239 per workflow ($[0.00192,0.00287]$), preserving 1.990 additional unrelated tasks ($[1.970,2.000]$). Exactly 90 pairs have two complete evaluations; seven have only SemKG complete, three only Global, and none have two errors. On the strict 90-pair subset, equal-cell-weighted savings are 2.020 tasks ($[1.975,2.065]$), 22.26 s ($[17.89,26.88]$), and \$0.00221 ($[0.00175,0.00269]$). Figure~\ref{fig:realworldpaired} uses only these matched repeats, not separately filtered samples.
+
+SemKG passes 70/100 workflows versus Global's 68/100; conditional rates are 70/97 and 68/93 (Figure~\ref{fig:realworldevidence}). Of the 100 pairs, both pass in 51, only SemKG in 19, only Global in 17, and neither in 13. The paired end-to-end difference (SemKG minus Global) is +2 percentage points, with a cell-cluster 95\% CI of $[-13,+17]$ points. A substantial correctness loss is therefore not excluded; equivalence and non-inferiority are unproved. All evaluator errors count as failures. The 15 error records involve artifact imports/evaluation; none is established as infrastructure-only. Attribution remains unresolved, so no favorable failure exclusion is used.
+
+Offline replay exactly reproduces all 100 SemKG decision sets. Removing the direct $C\rightarrow A$ relation removes $A$ in 100/100 graphs. Removing $A\rightarrow B$ removes $B$ in 69/74 eligible graphs; the other five retain a direct $C\rightarrow B$ path. Removing all edges gives an empty set in 100/100, and adding a false $C\rightarrow D$ edge selects $D$ in 100/100. Mutation and saved execution evidence are fixed: this establishes decision-set causality, not counterfactual hidden-test correctness.
+
+The direct/transitive split shows why provenance is required beyond direct contract reads: SemKG-Perfect has zero values for both violation types, while SemKG-Noisy has 0.12 direct and 0.18 transitive violations under imperfect observation. The zero commit-time acceptance count answers RQ1 for the one-mutation workload, without extrapolating to later mutations after a valid commit. The perfect graph has edge- and task-set precision/recall 1.00; the noisy graph yields 0.907/0.818 edge precision/recall and 0.846/0.867 task-set precision/recall, so safety remains conditional on observation quality.
+
+\begin{table}
+\centering
+\caption{Executable contract-test sanity check. Each cell is the number of passing runs out of 36 generated cases: 30 one-hop cases and six explicit three-hop cases.}
+\label{tab:executable}
+\small
+\begin{tabular}{lrr}
+\toprule
+Protocol & Passed & Failed\\
+\midrule
+Serial & 36 & 0\\
+Serial-Validated & 36 & 0\\
+NaiveParallel & 0 & 36\\
+StaticDAG & 0 & 36\\
+Version-Check & 30 & 6\\
+Global-Invalidate & 36 & 0\\
+SemKG-Perfect & 36 & 0\\
+SemKG-Noisy & 32 & 4\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The executable check isolates RQ2: Version-Check passes 30/30 direct cases but 0/6 multi-hop cases; SemKG-Perfect passes all six by traversing $C\rightarrow A\rightarrow B\rightarrow D$, and SemKG-Noisy passes 4/6 under edge omissions (Table~\ref{tab:executable}). The six cases vary contract versions but share one chain; they do not establish coverage of arbitrary repository topologies. Category results are retained in the supplement.
+
+
+\subsection{Sensitivity Analysis}
+A 20-scenario, 3-seed suite varies graph-cost scale, agent count, mutation time, and base task-success probability with paired draws. At the reference scale, Global-Invalidate costs 27,023 units versus 29,391 for SemKG-Perfect; the sweep crosses between scales 0.25 and 0.50. Later mutations increase stale rework, while lower base success increases ordinary rework for every protocol. These coefficients describe workload conditions, not production billing.
+
+\section{Threats to Validity}
+The workloads use injected contracts and compact harness tasks rather than natural issue histories. Each repository workflow fixes two affected and two unrelated tasks, so the 50.5\% reduction is workload-specific; a 25/50/75\% affected-ratio sweep remains future work. Perfect observation is an oracle upper bound, noisy edges are an observation model, and explicit path instrumentation misses implicit semantic dependencies. Graph ticks and token equivalents are proxies, not measured latency or USD; retained import/evaluator errors remain unresolved. Complete-pair sensitivity does not establish missing-at-random evaluation, and one-mutation executable checks do not cover LLM generation, production builds, or overlapping updates.
+
+\section{Discussion}
+The opposite efficiency orderings expose a cost boundary rather than a universal speedup. In simulation, SemKG saves 2,053 task tokens but incurs 4,406 token-equivalent graph overhead, raising cost by 2,352; its 75.67 ticks comprise 34.68 core ticks and 40.99 charged coordination ticks, versus 37.33 for Global. The fixed-trace break-even graph scale is 0.466, consistent with the sensitivity sweep.
+
+In the repository ledger, Global spends \$0.583 on rework versus SemKG's \$0.326; unrelated-task rework alone is \$0.249 versus \$0.00056. Avoided model calls therefore outweigh local traversal, although initial-attempt costs differ (\$0.592 versus \$0.611), so this decomposition is descriptive. The simulator's affected fraction ranges from 37.5\% to 70.8\% (mean 55.3\%), while runtime fixes 50\% and recovers selected tasks sequentially. Task prices, affected ratios, scheduling, and graph charges jointly determine the ranking; the correctness interval still rules out an equivalence claim.
+
+\section{Conclusion}
+SemKG is a versioned semantic-contract invalidation protocol for parallel software-engineering workflows. The paired 1,600-run simulation and executable multi-hop check support its safety mechanism, while the reference graph-cost model still favors Global-Invalidate. In the injected-contract repository workload, SemKG-Observed reduced rework and preserved unrelated tasks, but incomplete observation and Agent artifact failures remained visible. The evidence supports graph-driven selective coordination under these conditions, not universal production performance.
+
+\footnotesize
+\vspace{-8pt}
+\begin{multicols}{2}
+\let\small\footnotesize
+\bibliographystyle{splncs04}
+\bibliography{references}
+\end{multicols}
+\end{document}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

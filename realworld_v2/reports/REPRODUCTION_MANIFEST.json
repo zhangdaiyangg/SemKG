@@ -1,0 +1,355 @@
+{
+  "schema": "semkg-reproduction-manifest-v1",
+  "status": "local frozen supplement; no public repository URL has been assigned",
+  "repositories": [
+    {
+      "repository": "click",
+      "path": "D:\\paper-2\\realworld\\repos\\click",
+      "sha": "2247b35ea1c47c727d7a06e51fa280e12a863ff6",
+      "public_source": "https://github.com/pallets/click.git"
+    },
+    {
+      "repository": "flask",
+      "path": "D:\\paper-2\\realworld\\repos\\flask",
+      "sha": "d086db856be187255b8ec61ef409357393020f32",
+      "public_source": "https://github.com/pallets/flask.git"
+    },
+    {
+      "repository": "pytest",
+      "path": "D:\\paper-2\\realworld\\repos\\pytest",
+      "sha": "cb6ff97bcb147f2bb5d9e0072c424dc03a452ba1",
+      "public_source": "https://github.com/pytest-dev/pytest.git"
+    },
+    {
+      "repository": "requests",
+      "path": "D:\\paper-2\\realworld\\repos\\requests",
+      "sha": "611c6162cbc4ac2020a2f91c7cfa4f3abf9bbb60",
+      "public_source": "https://github.com/psf/requests.git"
+    },
+    {
+      "repository": "rich",
+      "path": "D:\\paper-2\\realworld\\repos\\rich",
+      "sha": "9d8f9a372cc5916fd4781fec207ced7ddac2f08f",
+      "public_source": "https://github.com/Textualize/rich.git"
+    }
+  ],
+  "protocols": [
+    "StaticDAG",
+    "Version-Check",
+    "Global-Invalidate",
+    "SemKG-Observed"
+  ],
+  "formal_scenarios": [
+    "price_unit",
+    "api_error",
+    "state_machine",
+    "idempotency"
+  ],
+  "defined_but_not_formal": [
+    "configuration"
+  ],
+  "repetitions_per_cell": 5,
+  "formal_run_count": 400,
+  "change_definitions": {
+    "price_unit": {
+      "v1_source": "CONTRACT_VERSION = 1\ndef normalize_price(value):\n    return float(value) / 100.0\n",
+      "v2_source": "CONTRACT_VERSION = 2\ndef normalize_price(value):\n    return float(value)\n",
+      "oracle_metadata": {
+        "input": 1234,
+        "expected": 1234.0,
+        "old": 12.34
+      }
+    },
+    "api_error": {
+      "v1_source": "CONTRACT_VERSION = 1\ndef parse_error(response):\n    if 'error' not in response: return None\n    return response['error']\n",
+      "v2_source": "CONTRACT_VERSION = 2\nclass MissingError(Exception): pass\ndef parse_error(response):\n    if 'error' not in response: raise MissingError('missing error')\n    return response['error']\n",
+      "oracle_metadata": {
+        "input": {},
+        "expected": "MissingError",
+        "old": null
+      }
+    },
+    "state_machine": {
+      "v1_source": "CONTRACT_VERSION = 1\ndef can_transition(old,new):\n    return (old,new) in {('new','paid'),('new','cancelled')}\n",
+      "v2_source": "CONTRACT_VERSION = 2\ndef can_transition(old,new):\n    return (old,new) in {('new','paid'),('new','cancelled'),('paid','refunded')}\n",
+      "oracle_metadata": {
+        "input": [
+          "paid",
+          "refunded"
+        ],
+        "expected": true,
+        "old": false
+      }
+    },
+    "idempotency": {
+      "v1_source": "CONTRACT_VERSION = 1\ndef idempotency_key(request):\n    return request['id']\n",
+      "v2_source": "CONTRACT_VERSION = 2\ndef idempotency_key(request):\n    return request['id'] + ':' + request.get('attempt','0')\n",
+      "oracle_metadata": {
+        "input": {
+          "id": "A",
+          "attempt": "2"
+        },
+        "expected": "A:2",
+        "old": "A"
+      }
+    }
+  },
+  "system_prompt": "You are one coding agent in a concurrent repository workflow. Inspect files before editing. Implement the requested artifact using the contract version you read, copying the semantic behavior into your own code. Do not import or call semkg_contract at runtime; the artifact must preserve the assumption it used. Use only the supplied tools and keep changes inside your attempt directory. Do not run repository-wide tests or explore unrelated files; after required reads, write the requested output immediately.",
+  "task_prompts": {
+    "price_unit": [
+      {
+        "task_id": "A_direct",
+        "role": "affected_direct",
+        "output_files": [
+          "producer.py"
+        ],
+        "prompt": "Read semkg_contract.py first. Create producer.py under the attempt directory. Define normalize_price(1234) behavior by copying the current contract semantics into producer.py; do not import semkg_contract. The v2 behavior must be implemented when you read version 2.",
+        "direct_contract_read": true,
+        "upstream": []
+      },
+      {
+        "task_id": "B_transitive",
+        "role": "affected_transitive",
+        "output_files": [
+          "downstream.py"
+        ],
+        "prompt": "Immediately call read_file on committed/A_direct/producer.py. Then immediately call write_file with path downstream.py (or your attempt directory prefix) and create a downstream.py defining consume(value) by calling the producer function or equivalent copied implementation. Do not import semkg_contract; preserve the version observed in the upstream artifact. If you import the committed producer, use the package path `committed.A_direct.producer` or the file-relative path `../A_direct/producer.py`; never prefix `committed/` twice. The required output is downstream.py, not a prose answer.",
+        "direct_contract_read": true,
+        "upstream": [
+          "A_direct"
+        ]
+      },
+      {
+        "task_id": "D_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_report.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_report.py (or your attempt directory prefix). Create a real deterministic report() returning a nonempty string containing D_unrelated. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      },
+      {
+        "task_id": "E_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_config.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_config.py (or your attempt directory prefix). Create a real deterministic feature_flag() returning True and CONFIG_NAME. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      }
+    ],
+    "api_error": [
+      {
+        "task_id": "A_direct",
+        "role": "affected_direct",
+        "output_files": [
+          "producer.py"
+        ],
+        "prompt": "Read semkg_contract.py first. Create producer.py under the attempt directory. Define parse_error({}) behavior by copying the current contract semantics into producer.py; do not import semkg_contract. The v2 behavior must be implemented when you read version 2.",
+        "direct_contract_read": true,
+        "upstream": []
+      },
+      {
+        "task_id": "B_transitive",
+        "role": "affected_transitive",
+        "output_files": [
+          "downstream.py"
+        ],
+        "prompt": "Immediately call read_file on committed/A_direct/producer.py. Then immediately call write_file with path downstream.py (or your attempt directory prefix) and create a downstream.py defining consume(value) by calling the producer function or equivalent copied implementation. Do not import semkg_contract; preserve the version observed in the upstream artifact. If you import the committed producer, use the package path `committed.A_direct.producer` or the file-relative path `../A_direct/producer.py`; never prefix `committed/` twice. The required output is downstream.py, not a prose answer.",
+        "direct_contract_read": true,
+        "upstream": [
+          "A_direct"
+        ]
+      },
+      {
+        "task_id": "D_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_report.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_report.py (or your attempt directory prefix). Create a real deterministic report() returning a nonempty string containing D_unrelated. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      },
+      {
+        "task_id": "E_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_config.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_config.py (or your attempt directory prefix). Create a real deterministic feature_flag() returning True and CONFIG_NAME. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      }
+    ],
+    "state_machine": [
+      {
+        "task_id": "A_direct",
+        "role": "affected_direct",
+        "output_files": [
+          "producer.py"
+        ],
+        "prompt": "Read semkg_contract.py first. Create producer.py under the attempt directory. Define can_transition('paid', 'refunded') behavior by copying the current contract semantics into producer.py; do not import semkg_contract. The v2 behavior must be implemented when you read version 2.",
+        "direct_contract_read": true,
+        "upstream": []
+      },
+      {
+        "task_id": "B_transitive",
+        "role": "affected_transitive",
+        "output_files": [
+          "downstream.py"
+        ],
+        "prompt": "Immediately call read_file on semkg_contract.py and then write downstream.py. This is the fork branch: implement consume(old,new) by copying the current contract v1/v2 semantics into the artifact. Do not import semkg_contract; the required output is downstream.py.",
+        "direct_contract_read": false,
+        "upstream": [
+          "A_direct"
+        ]
+      },
+      {
+        "task_id": "D_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_report.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_report.py (or your attempt directory prefix). Create a real deterministic report() returning a nonempty string containing D_unrelated. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      },
+      {
+        "task_id": "E_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_config.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_config.py (or your attempt directory prefix). Create a real deterministic feature_flag() returning True and CONFIG_NAME. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      }
+    ],
+    "idempotency": [
+      {
+        "task_id": "A_direct",
+        "role": "affected_direct",
+        "output_files": [
+          "producer.py"
+        ],
+        "prompt": "Read semkg_contract.py first. Create producer.py under the attempt directory. Define idempotency_key({'id':'A','attempt':'2'}) behavior by copying the current contract semantics into producer.py; do not import semkg_contract. The v2 behavior must be implemented when you read version 2.",
+        "direct_contract_read": true,
+        "upstream": []
+      },
+      {
+        "task_id": "B_transitive",
+        "role": "affected_transitive",
+        "output_files": [
+          "downstream.py"
+        ],
+        "prompt": "Immediately call read_file on committed/A_direct/producer.py. Then immediately call write_file with path downstream.py (or your attempt directory prefix) and create a downstream.py defining consume(value) by calling the producer function or equivalent copied implementation. Do not import semkg_contract; preserve the version observed in the upstream artifact. If you import the committed producer, use the package path `committed.A_direct.producer` or the file-relative path `../A_direct/producer.py`; never prefix `committed/` twice. The required output is downstream.py, not a prose answer.",
+        "direct_contract_read": true,
+        "upstream": [
+          "A_direct"
+        ]
+      },
+      {
+        "task_id": "D_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_report.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_report.py (or your attempt directory prefix). Create a real deterministic report() returning a nonempty string containing D_unrelated. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      },
+      {
+        "task_id": "E_unrelated",
+        "role": "unrelated",
+        "output_files": [
+          "unrelated_config.py"
+        ],
+        "prompt": "Your first tool call must be write_file with path unrelated_config.py (or your attempt directory prefix). Create a real deterministic feature_flag() returning True and CONFIG_NAME. Do not read semkg_contract and do not create any other file.",
+        "direct_contract_read": false,
+        "upstream": []
+      }
+    ]
+  },
+  "tool_schema": [
+    {
+      "type": "function",
+      "function": {
+        "name": "read_file",
+        "description": "Read a UTF-8 file in this workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "write_file",
+        "description": "Write a UTF-8 file under the attempt directory.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "path": {
+              "type": "string"
+            },
+            "content": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "path",
+            "content"
+          ]
+        }
+      }
+    },
+    {
+      "type": "function",
+      "function": {
+        "name": "run_command",
+        "description": "Run a Python check in the workspace.",
+        "parameters": {
+          "type": "object",
+          "properties": {
+            "command": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "command"
+          ]
+        }
+      }
+    }
+  ],
+  "token_rates_usd_per_million": {
+    "cache_hit_input": 0.003,
+    "uncached_input": 0.15,
+    "output": 0.6
+  },
+  "graph_counting_rule": "paper read counts deduplicate first-attempt runtime reads by (run_id, task_id, path); raw event logs retain repeated rework reads",
+  "commands": {
+    "token_ledger": "python realworld_v2/analysis/token_ledger.py",
+    "export_manifest": "python realworld_v2/analysis/export_repro_manifest.py",
+    "strict_audit": "python realworld_v2/analysis/review_revision_analysis.py",
+    "graph_replay": "python realworld_v2/analysis/graph_edge_replay.py",
+    "cost_decomposition": "python realworld_v2/analysis/cost_model_decomposition.py",
+    "tests": "python -m pytest realworld_v2/tests/test_review_revision.py -q"
+  },
+  "source_sha256": {
+    "realworld_v2/controller/v2_runtime.py": "4415f9a01df53a719c6ca424bb749a5197ed01d19a5344b14415d072d37fdf61",
+    "realworld_v2/analysis/token_ledger.py": "6cab97ed2ad1b8b9d884ac27dae08b0e85f1bafe2d8efdb07932bc865200df10",
+    "realworld_v2/analysis/export_repro_manifest.py": "a4b26ed388537a8d417bd5ff6f0589599dbd7dca6c1b576080132177a1d35ee7"
+  }
+}

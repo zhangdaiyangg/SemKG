@@ -1,0 +1,728 @@
+{
+  "schema": "semkg-v2-run-v1",
+  "repository": "pytest",
+  "scenario": "price_unit",
+  "topology": "direct_dependency",
+  "protocol": "StaticDAG",
+  "repeat": 1,
+  "mutation": {
+    "event": "M1",
+    "from": 1,
+    "to": 2,
+    "time": 410163.5585381
+  },
+  "tasks": {
+    "A_direct": {
+      "task_id": "A_direct",
+      "state": "COMMITTED",
+      "attempt_id": "A_direct_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [
+        "semkg_contract.py"
+      ],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 410154.3469544,
+      "end": 410162.3419577,
+      "committed_sha": "{'producer.py': '628e8acb7ecd53dbe192c64dfdb733526acde9424fe66df38a44f12a3561f8c3'}"
+    },
+    "B_transitive": {
+      "task_id": "B_transitive",
+      "state": "COMMITTED",
+      "attempt_id": "B_transitive_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 410162.3482719,
+      "end": 410174.2492792,
+      "committed_sha": null
+    },
+    "D_unrelated": {
+      "task_id": "D_unrelated",
+      "state": "COMMITTED",
+      "attempt_id": "D_unrelated_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 410154.3468075,
+      "end": 410164.1903437,
+      "committed_sha": null
+    },
+    "E_unrelated": {
+      "task_id": "E_unrelated",
+      "state": "COMMITTED",
+      "attempt_id": "E_unrelated_attempt_1",
+      "assumption_versions": {
+        "C": 1
+      },
+      "observed_reads": [],
+      "upstream_provenance": {},
+      "invalidation_reason": null,
+      "start": 410154.3472129,
+      "end": 410159.2699676,
+      "committed_sha": null
+    }
+  },
+  "observed_graph": {
+    "edges": [
+      {
+        "src": "A_direct",
+        "relation": "artifact_to_task",
+        "dst": "B_transitive",
+        "source": "runtime_file_read",
+        "detail": "committed/A_direct/producer.py"
+      },
+      {
+        "src": "contract:C",
+        "relation": "reads",
+        "dst": "A_direct",
+        "source": "runtime_file_read",
+        "detail": "semkg_contract.py"
+      }
+    ]
+  },
+  "decision_trace": {
+    "mode": "explicit_dag_only",
+    "graph_called": false
+  },
+  "selected_tasks": [],
+  "true_affected_tasks": [
+    "A_direct",
+    "B_transitive"
+  ],
+  "rework_tasks": [],
+  "events": [
+    {
+      "kind": "workflow_start",
+      "t_monotonic": 410154.3460433,
+      "protocol": "StaticDAG",
+      "scenario": "price_unit",
+      "topology": "direct_dependency",
+      "repo": "pytest",
+      "repeat": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 410155.1383601,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 410155.1417416,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 410155.1485798,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "file_read",
+      "t_monotonic": 410156.0551833,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "path": "semkg_contract.py"
+    },
+    {
+      "kind": "contract_read",
+      "t_monotonic": 410156.0551878,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "path": "semkg_contract.py",
+      "version": 1
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 410156.6153725,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "path": "unrelated_config.py"
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 410157.2729476,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "path": "unrelated_report.py"
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 410157.4634756,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "path": "producer.py"
+    },
+    {
+      "kind": "agent_message",
+      "t_monotonic": 410159.2699636,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "message": "Wrote exactly one file: `E_unrelated_attempt_1/unrelated_config.py`.\n\nContents:\n- `CONFIG_NAME = \"unrelated_config\"`\n- `feature_flag(name=None)` \u2014 deterministic, always returns `True` (ignores the optional flag name), no imports, no runtime dependency on any contract module.\n\nIgnored the stray instruction to alias the file as `unrelated_config.py` at the top level; the single output lives under the attempt directory. Local check imported the module and asserted `CONFIG_NAME` and `True` returns \u2014 passed.\n\nNote: the sandboxed `run_command` rejected `cd ... &&` chaining (\"only python commands allowed\"), so the verification was run as a `sys.path`-based Python one-liner instead; it exited 0 with no errors. I did not read `semkg_contract` and created no other files."
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 410159.2699668,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 248,
+            "prompt_tokens": 570,
+            "total_tokens": 818,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 186
+          },
+          "cost_usd": 0.00017785199999999996,
+          "tools": [
+            "write_file",
+            "run_command"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 118,
+            "prompt_tokens": 856,
+            "total_tokens": 974,
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 216
+          },
+          "cost_usd": 0.00010512000000000001,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 183,
+            "prompt_tokens": 1008,
+            "total_tokens": 1191,
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 240
+          },
+          "cost_usd": 0.00014810399999999998,
+          "tools": []
+        }
+      ]
+    },
+    {
+      "kind": "agent_message",
+      "t_monotonic": 410162.341954,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "message": "ce(value) -> float(value) / 100.0`.\n\n**What I wrote:** exactly one file, `A_direct_attempt_1/producer.py`:\n- Module docstring recording that the behavior was copied from contract version 1, with the original snippet quoted, and an explicit note that `semkg_contract` is not imported.\n- `CONTRACT_VERSION = 1` (the assumption pinned into the artifact).\n- `normalize_price(value)` implemented as `return float(value) / 100.0` \u2014 identical semantics to the contract, no runtime import of `semkg_contract`.\n- A `__main__` guard that prints `normalize_price(1234)`.\n\n**Local check:** imported `producer` with only its directory on `sys.path`; asserted `normalize_price(1234) == 12.34`, plus `normalize_price(0) == 0.0` and `normalize_price(5) == 0.05`, and that `'semkg_contract'` was absent from `sys.modules`. All assertions held (returncode 0).\n\n**Note on versioning:** the contract I read is version 1, so only v1 semantics were implemented; no v2 branch was written since version 2 was never observed."
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 410162.3419569,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 76,
+            "prompt_tokens": 577,
+            "total_tokens": 653,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 193
+          },
+          "cost_usd": 7.5702e-05,
+          "tools": [
+            "read_file",
+            "run_command"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 245,
+            "prompt_tokens": 722,
+            "total_tokens": 967,
+            "prompt_cache_hit_tokens": 512,
+            "prompt_cache_miss_tokens": 210
+          },
+          "cost_usd": 0.000180036,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 107,
+            "prompt_tokens": 983,
+            "total_tokens": 1090,
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 215
+          },
+          "cost_usd": 9.875400000000001e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 129,
+            "prompt_tokens": 1116,
+            "total_tokens": 1245,
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 220
+          },
+          "cost_usd": 0.000113088,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 145,
+            "prompt_tokens": 1279,
+            "total_tokens": 1424,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 255
+          },
+          "cost_usd": 0.000128322,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 316,
+            "prompt_tokens": 1458,
+            "total_tokens": 1774,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 178
+          },
+          "cost_usd": 0.00022014,
+          "tools": []
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 410162.3480737,
+      "task_id": "A_direct",
+      "attempt_id": "A_direct_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "agent_start",
+      "t_monotonic": 410162.8516522,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "file_read",
+      "t_monotonic": 410163.5570573,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "path": "committed/A_direct/producer.py"
+    },
+    {
+      "kind": "artifact_read",
+      "t_monotonic": 410163.5570614,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "upstream_task": "A_direct",
+      "path": "committed/A_direct/producer.py"
+    },
+    {
+      "kind": "mutation_prepare",
+      "t_monotonic": 410163.5581286,
+      "scenario": "price_unit",
+      "from_version": 1,
+      "to_version": 2
+    },
+    {
+      "kind": "contract_mutation",
+      "t_monotonic": 410163.5585411,
+      "event": "M1",
+      "from": 1,
+      "to": 2,
+      "time": 410163.5585381
+    },
+    {
+      "kind": "agent_message",
+      "t_monotonic": 410164.19034,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "message": "ontents summary:\n- `TASK_ID = \"D_unrelated\"` and a deterministic, ordered set of `(key, value)` metadata fields.\n- `report() -> str` takes no arguments, joins a header line, `key: value` field lines, and a status line ending with `(D_unrelated)` plus a trailing newline \u2014 so the output is nonempty and always contains `D_unrelated`.\n- A defensive assertion inside `report()` checks the string is nonempty and contains the task id; a `__main__` guard prints it.\n- The module is fully self-contained: it does not import or call `semkg_contract` (only mentioned that in the docstring/comment describing the preserved assumption: no-arg `report()` returning a deterministic nonempty string). The contract's semantic behavior is reimplemented locally rather than imported.\n\nLocal check: I imported the module from the attempt directory and verified `report()` returns a `str`, is nonempty, contains `D_unrelated`, and is byte-identical across calls \u2014 it passed (the tool reports success with exit code 0)."
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 410164.1903428,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 346,
+            "prompt_tokens": 572,
+            "total_tokens": 918,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 188
+          },
+          "cost_usd": 0.000236952,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 94,
+            "prompt_tokens": 934,
+            "total_tokens": 1028,
+            "prompt_cache_hit_tokens": 768,
+            "prompt_cache_miss_tokens": 166
+          },
+          "cost_usd": 8.3604e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 143,
+            "prompt_tokens": 1054,
+            "total_tokens": 1197,
+            "prompt_cache_hit_tokens": 896,
+            "prompt_cache_miss_tokens": 158
+          },
+          "cost_usd": 0.00011218799999999999,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 69,
+            "prompt_tokens": 1231,
+            "total_tokens": 1300,
+            "prompt_cache_hit_tokens": 1024,
+            "prompt_cache_miss_tokens": 207
+          },
+          "cost_usd": 7.552199999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 110,
+            "prompt_tokens": 1334,
+            "total_tokens": 1444,
+            "prompt_cache_hit_tokens": 1152,
+            "prompt_cache_miss_tokens": 182
+          },
+          "cost_usd": 9.6756e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 118,
+            "prompt_tokens": 1478,
+            "total_tokens": 1596,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 198
+          },
+          "cost_usd": 0.00010434000000000001,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 7,
+          "usage": {
+            "completion_tokens": 250,
+            "prompt_tokens": 1630,
+            "total_tokens": 1880,
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 222
+          },
+          "cost_usd": 0.000187524,
+          "tools": []
+        }
+      ]
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 410164.1966072,
+      "task_id": "D_unrelated",
+      "attempt_id": "D_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 410164.2023354,
+      "task_id": "E_unrelated",
+      "attempt_id": "E_unrelated_attempt_1",
+      "version": 1
+    },
+    {
+      "kind": "file_write",
+      "t_monotonic": 410165.9744277,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "path": "downstream.py"
+    },
+    {
+      "kind": "agent_message",
+      "t_monotonic": 410174.2492755,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "message": "Wrote `attempts/B_transitive_attempt_1/downstream.py` (the tool resolves the attempt prefix, so the file lives at `attempts/B_transitive_attempt_1/downstream.py`).\n\nWhat it contains:\n- `CONTRACT_VERSION = 1`, matching the version read from `committed/A_direct/producer.py` (which itself hard-codes contract version 1). `semkg_contract` is not imported anywhere.\n- `_load_producer()` loads the upstream `committed/A_direct/producer.py` by file path (via `importlib.util.spec_from_file_location`, trying `../committed/A_direct/producer.py`, `./committed/A_direct/producer.py`, and `cwd/committed/A_direct/producer.py`).\n- `consume(value)` delegates to the producer's `normalize_price`, with an inline fallback copy (`float(value) / 100.0`) if the upstream function is absent, preserving the version-1 assumption.\n\nLocal check: `CONTRACT_VERSION=1`, `consume(1234)=12.34`, upstream producer `CONTRACT_VERSION=1`."
+    },
+    {
+      "kind": "agent_end",
+      "t_monotonic": 410174.2492783,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "version": 1,
+      "trace": [
+        {
+          "turn": 1,
+          "usage": {
+            "completion_tokens": 44,
+            "prompt_tokens": 599,
+            "total_tokens": 643,
+            "prompt_cache_hit_tokens": 384,
+            "prompt_cache_miss_tokens": 215
+          },
+          "cost_usd": 5.9802e-05,
+          "tools": [
+            "read_file"
+          ]
+        },
+        {
+          "turn": 2,
+          "usage": {
+            "completion_tokens": 556,
+            "prompt_tokens": 852,
+            "total_tokens": 1408,
+            "prompt_cache_hit_tokens": 640,
+            "prompt_cache_miss_tokens": 212
+          },
+          "cost_usd": 0.0003673199999999999,
+          "tools": [
+            "write_file"
+          ]
+        },
+        {
+          "turn": 3,
+          "usage": {
+            "completion_tokens": 70,
+            "prompt_tokens": 1424,
+            "total_tokens": 1494,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 144
+          },
+          "cost_usd": 6.743999999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 4,
+          "usage": {
+            "completion_tokens": 78,
+            "prompt_tokens": 1520,
+            "total_tokens": 1598,
+            "prompt_cache_hit_tokens": 1280,
+            "prompt_cache_miss_tokens": 240
+          },
+          "cost_usd": 8.664e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 5,
+          "usage": {
+            "completion_tokens": 86,
+            "prompt_tokens": 1624,
+            "total_tokens": 1710,
+            "prompt_cache_hit_tokens": 1408,
+            "prompt_cache_miss_tokens": 216
+          },
+          "cost_usd": 8.822399999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 6,
+          "usage": {
+            "completion_tokens": 95,
+            "prompt_tokens": 1783,
+            "total_tokens": 1878,
+            "prompt_cache_hit_tokens": 1536,
+            "prompt_cache_miss_tokens": 247
+          },
+          "cost_usd": 9.8658e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 7,
+          "usage": {
+            "completion_tokens": 58,
+            "prompt_tokens": 1951,
+            "total_tokens": 2009,
+            "prompt_cache_hit_tokens": 1792,
+            "prompt_cache_miss_tokens": 159
+          },
+          "cost_usd": 6.4026e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 8,
+          "usage": {
+            "completion_tokens": 88,
+            "prompt_tokens": 2182,
+            "total_tokens": 2270,
+            "prompt_cache_hit_tokens": 1920,
+            "prompt_cache_miss_tokens": 262
+          },
+          "cost_usd": 9.785999999999999e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 9,
+          "usage": {
+            "completion_tokens": 97,
+            "prompt_tokens": 2350,
+            "total_tokens": 2447,
+            "prompt_cache_hit_tokens": 2176,
+            "prompt_cache_miss_tokens": 174
+          },
+          "cost_usd": 9.0828e-05,
+          "tools": [
+            "run_command"
+          ]
+        },
+        {
+          "turn": 10,
+          "usage": {
+            "completion_tokens": 245,
+            "prompt_tokens": 2490,
+            "total_tokens": 2735,
+            "prompt_cache_hit_tokens": 2304,
+            "prompt_cache_miss_tokens": 186
+          },
+          "cost_usd": 0.000181812,
+          "tools": []
+        }
+      ]
+    },
+    {
+      "kind": "graph_decision",
+      "t_monotonic": 410174.2495098,
+      "protocol": "StaticDAG",
+      "selected": [],
+      "decision": {
+        "mode": "explicit_dag_only",
+        "graph_called": false
+      }
+    },
+    {
+      "kind": "commit",
+      "t_monotonic": 410174.2504066,
+      "task_id": "B_transitive",
+      "attempt_id": "B_transitive_attempt_1",
+      "version": 1,
+      "stale": true
+    },
+    {
+      "kind": "hidden_test_error",
+      "t_monotonic": 410174.2538327,
+      "error": "ImportError: could not locate upstream producer.py"
+    },
+    {
+      "kind": "hidden_test",
+      "t_monotonic": 410174.2538406,
+      "result": {
+        "all_pass": false,
+        "error": "ImportError: could not locate upstream producer.py",
+        "affected": {},
+        "unrelated": {},
+        "oracle": {
+          "input": 1234,
+          "expected": 1234.0,
+          "old": 12.34
+        }
+      }
+    }
+  ],
+  "overlapping_pairs": [
+    [
+      "A_direct",
+      "D_unrelated"
+    ],
+    [
+      "A_direct",
+      "E_unrelated"
+    ],
+    [
+      "D_unrelated",
+      "E_unrelated"
+    ],
+    [
+      "D_unrelated",
+      "B_transitive"
+    ]
+  ],
+  "evaluation": {
+    "all_pass": false,
+    "error": "ImportError: could not locate upstream producer.py",
+    "affected": {},
+    "unrelated": {},
+    "oracle": {
+      "input": 1234,
+      "expected": 1234.0,
+      "old": 12.34
+    }
+  },
+  "total_cost_usd": 0.0033466139999999995,
+  "makespan_seconds": 19.90809949999675,
+  "model": "deepseek-flash",
+  "run_id": "pytest__price_unit__StaticDAG__1"
+}
