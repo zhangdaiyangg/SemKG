@@ -4,7 +4,6 @@ Artifacts for **SemKG: Coordinating Parallel Coding Agents under Evolving Semant
 
 ## Contents
 
-- `paper/`: latest manuscript PDF, LaTeX source, bibliography, and figures.
 - `realworld_v2/`: frozen controller, prompts and change definitions, four
   protocols, formal traces, replay scripts, reports, and tests.
 - `artifact/semkg-review-artifact.zip`: offline reviewer bundle with pinned
