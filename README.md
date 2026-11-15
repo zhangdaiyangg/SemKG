@@ -2,6 +2,8 @@
 
 Artifacts for **SemKG: Coordinating Parallel Coding Agents under Evolving Semantic Contracts**.
 
+Public repository: <https://github.com/zhangdaiyangg/SemKG>
+
 ## Contents
 
 - `realworld_v2/`: frozen controller, prompts and change definitions, four

@@ -41,7 +41,7 @@ def main() -> None:
         prompts[scenario] = [asdict(spec) for spec in task_specs(scenario)]
     manifest = {
         "schema": "semkg-reproduction-manifest-v1",
-        "status": "local frozen supplement; no public repository URL has been assigned",
+        "status": "public repository: https://github.com/zhangdaiyangg/SemKG",
         "repositories": repo_manifest,
         "protocols": ["StaticDAG", "Version-Check", "Global-Invalidate", "SemKG-Observed"],
         "formal_scenarios": list(changes),

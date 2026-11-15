@@ -2,9 +2,11 @@
 
 Artifact revision: `2026-10-18-review` (strict matched-pair audit, cost decomposition, and frozen graph-edge replay). The distributable review bundle is `artifact/semkg-review-artifact.zip`; the earlier `semkg-selective-r6.zip` remains available for the simulator-only artifact.
 
+Public repository: <https://github.com/zhangdaiyangg/SemKG>
+
 This directory is the reproducibility entry point for the paired discrete-event
 simulation, repository audit, graph replay, and executable contract-test sanity
-check reported in the paper.
+check for the SemKG artifact.
 
 ## Reproduce
 
@@ -31,8 +33,6 @@ network calls. The simulator-only command remains available as
 - `results/transitive_audit_summary.csv`: final transitive-staleness audit.
 - `results/executable/by_category.csv`: direct-category and multi-hop outcomes.
 - `results/experiment_manifest.json`: seeds, protocol order, noise, and cost model.
-- `paper/main.tex`, `paper/main.pdf`: source and compiled 14-page LNCS manuscript.
-
 The expected corrected audit has zero final transitive artifacts and zero
 commit-time stale acceptances for SemKG-Perfect. SemKG-Noisy can accept a true
 stale read when its graph omits that read edge; the audit trace makes the
